@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: planet-one
+    runtime: node
+    region: frankfurt
+    plan: starter
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /
+    autoDeployTrigger: commit
+    disk:
+      name: planet-one-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATA_PATH
+        value: /var/data/data.json
+      - key: KONEKT_JWT_SECRET
+        generateValue: true
+      - key: KONEKT_WEBHOOK_SECRET
+        generateValue: true
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
