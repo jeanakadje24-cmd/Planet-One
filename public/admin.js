@@ -1,4 +1,4 @@
-let token,poller,centralKey='';
+let token,poller,centralKey='',knownRequests=new Set(),soundContext;
 const $=x=>document.querySelector(x);
 const api=async(p,o={})=>{const r=await fetch(p,{...o,headers:{'Content-Type':'application/json',Authorization:'Bearer '+token,...(centralKey?{'X-Central-Access':centralKey}:{})}});const d=await r.json();if(!r.ok)throw Error(d.error||'Erreur de connexion');return d};
 const dt=x=>x?new Date(x).toLocaleString('fr-FR',{dateStyle:'medium',timeStyle:'short'}):'—';
@@ -19,3 +19,8 @@ $('#unlockcentral').onclick=async()=>{try{const d=await api('/api/admin/central/
 $('#createadmin').onclick=async()=>{try{await api('/api/admin/central/admins',{method:'POST',body:JSON.stringify({terminal:$('#adminterminal').value,email:$('#adminemail').value,password:$('#admincode').value})});$('#adminmsg').textContent='Administrateur créé.';$('#adminterminal').value='';$('#adminemail').value='';$('#admincode').value='';loadCentral()}catch(e){$('#adminmsg').textContent=e.message}};
 $('#changecode').onclick=async()=>{try{await api('/api/admin/change-password',{method:'POST',body:JSON.stringify({currentPassword:$('#currentcode').value,newPassword:$('#newcode').value})});$('#codemsg').textContent='Code principal modifié.';$('#currentcode').value='';$('#newcode').value=''}catch(e){$('#codemsg').textContent=e.message}};
 $('#changeemail').onclick=async()=>{try{const d=await api('/api/admin/change-email',{method:'POST',body:JSON.stringify({newEmail:$('#newemail').value,currentPassword:$('#emailcode').value})});$('#emailmsg').textContent='E-mail modifié : '+d.email;$('#email').value=d.email;$('#newemail').value='';$('#emailcode').value=''}catch(e){$('#emailmsg').textContent=e.message}};
+function enableSound(){try{soundContext=new (window.AudioContext||window.webkitAudioContext)();soundContext.resume()}catch{}}
+function alertSound(){if(!soundContext)return;const oscillator=soundContext.createOscillator(),gain=soundContext.createGain();oscillator.type='sine';oscillator.frequency.value=880;gain.gain.setValueAtTime(.001,soundContext.currentTime);gain.gain.exponentialRampToValueAtTime(.18,soundContext.currentTime+.03);gain.gain.exponentialRampToValueAtTime(.001,soundContext.currentTime+.55);oscillator.connect(gain).connect(soundContext.destination);oscillator.start();oscillator.stop(soundContext.currentTime+.56)}
+async function watchIncoming(){if(!token)return;try{const d=await api('/api/admin/overview'),current=new Set(d.transactions.map(x=>x.id)),incoming=d.transactions.filter(x=>!knownRequests.has(x.id));if(knownRequests.size&&incoming.length){alertSound();$('#msg').textContent='Nouvelle demande reçue : '+incoming.length;}knownRequests=current}catch{}}
+document.addEventListener('click',e=>{if(e.target.id==='connect')enableSound()});
+setInterval(watchIncoming,5000);
